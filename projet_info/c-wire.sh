@@ -58,10 +58,10 @@ if [ $# -lt 3 ]; then
 fi
 
 # Assignation des paramètres
-INPUT_FILE=input/$1
-STATION_TYPE=$2
-CONSUMER_TYPE=$3
-CENTRAL="${4:-}" #optionnel
+INPUT_FILE="input/$1"
+STATION_TYPE="$2"
+CONSUMER_TYPE="$3"
+CENTRAL="${4:-}" # optionnel
 
 # Vérification de l'existence du fichier
 if [ ! -f "$INPUT_FILE" ]; then
@@ -91,13 +91,15 @@ if [[ "$STATION_TYPE" == "hva" && ( "$CONSUMER_TYPE" == "all" || "$CONSUMER_TYPE
     show_help
 fi
 
-if [[ -n "$central" ]]; then
-    awk -F';' -v central="$central" '
-        $1 == central {
-            print $1 ";" $2 ";" $3 ";" $4 ";" $5 ";" $6 ";" $7 ";" $8
-        }' "$INPUT_FILE" > fichier.csv
+# Filtrage si CENTRAL est défini
+echo "Valeur de CENTRAL : $CENTRAL"
+if [[ -n "$CENTRAL" ]]; then
+    awk -F';' -v val="$CENTRAL" '$1 == val { print $0 }' "$INPUT_FILE" > fichier.csv
+    
     INPUT_FILE=fichier.csv
 fi
+
+
 
                 
 
@@ -219,4 +221,3 @@ execution_time=$((end_time - start_time))
 # Affichage de la durée
 echo "Durée du traitement : ${execution_time} secondes."
 exit 0
-
