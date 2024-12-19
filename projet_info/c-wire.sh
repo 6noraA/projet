@@ -95,7 +95,7 @@ fi
 echo "Valeur de CENTRAL : $CENTRAL"
 if [[ -n "$CENTRAL" ]]; then
     awk -F';' -v val="$CENTRAL" '$1 == val { print $0 }' "$INPUT_FILE" > fichier.csv
-    
+    echo "Fichier trié."
     INPUT_FILE=fichier.csv
 fi
 
@@ -197,11 +197,20 @@ case $STATION_TYPE in
                         print $4 ";" $7 ";" $8
                     }' "$INPUT_FILE" > tmp/lv_all.dat
                 echo "Résultat intermédiaire : tmp/lv_all.dat"
-                echo "Station $STATION_TYPE : Capacité $CONSUMER_TYPE ; Load" > "result/lv_all_resultat.csv"
+                echo "Station $STATION_TYPE : Capacité $CONSUMER_TYPE : Load" > "result/lv_all_resultat.csv"
                 process_c_wire tmp/lv_all.dat result/lv_all_resultat.csv
                 echo "Résultat final : result/lv_all_resultat.csv"
-                tail -n +2 "result/lv_all_resultat.csv" | sort -t':' -k3,3nr | head -n 10 > "result/lv_all_minmax.csv"
-	        tail -n +2 "result/lv_all_resultat.csv" | sort -t':' -k3,3nr | tail -n 10 >> "result/lv_all_minmax.csv"
+                tail -n +2 "result/lv_all_resultat.csv" | sort -t':' -k3,3nr | head -n 10 > "tmp/lv_all_minmax.csv"
+	        tail -n +2 "result/lv_all_resultat.csv" | sort -t':' -k3,3nr | tail -n 10 >> "tmp/lv_all_minmax.csv"
+	        echo "Station $STATION_TYPE : Capacité $CONSUMER_TYPE : Load" > "result/lv_all_minmax.csv"
+		awk -F: '{diff = $2 - $3; print $0 ":" diff}' "tmp/lv_all_minmax.csv" | sort -t: -k4,4nr | uniq > "result/lv_all_minmax.csv"
+		
+
+
+		gnuplot graphe.gnu
+
+
+
 
                 echo "resultat min max dans result/lv_all_minmax.csv"
                 ;;
@@ -217,6 +226,7 @@ echo "Traitement terminé."
 # Enregistrement de la fin du traitement
 end_time=$(date +%s)
 execution_time=$((end_time - start_time))
+rm fichier.csv
 
 # Affichage de la durée
 echo "Durée du traitement : ${execution_time} secondes."
