@@ -232,7 +232,7 @@ execution_time=$((end_time - start_time))
 
 # Nettoyage temporaire
 rm -f fichier.csv
-
+rm -f progc/*o
 # Affichage de la durée
 echo "Traitement terminé. Durée : ${execution_time} secondes."
 exit 0
