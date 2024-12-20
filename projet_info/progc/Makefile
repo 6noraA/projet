@@ -20,6 +20,8 @@ debug: CFLAGS += -DDEBUG
 debug: clean all
 
 clean:
-	rm -f $(TARGET) $(OBJECTS)
+    rm -f $(TARGET) $(OBJECTS)
+    rm -f *.o
+
 
 .PHONY: all clean debug
