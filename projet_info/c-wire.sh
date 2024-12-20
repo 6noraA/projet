@@ -208,7 +208,8 @@ case $STATION_TYPE in
 
 		# Étape 2 : Calculer la différence entre les colonnes 2 et 3, trier par cette différence, et supprimer la 4ᵉ colonne
 		awk -F: '{diff = $2 - $3; print $0 ":" diff}' "tmp/lv_all_minmax.csv" | sort -t: -k4,4n | uniq | cut -d: -f1-3 >> "result/lv_all_minmax.csv"
-
+		
+		mkdir -p graphe
 		mv "graphe"/* "test/"
 		gnuplot graphe.gnu
 
