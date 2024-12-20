@@ -2,18 +2,24 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -g
 LDFLAGS =
-SOURCES = main.c avl.c
-HEADERS = avl.h
+SOURCES = $(wildcard *.c)
+OBJECTS = $(SOURCES:.c=.o)
+HEADERS = $(wildcard *.h)
 TARGET = c-wire
 
 # Règles
 all: $(TARGET)
 
-$(TARGET): $(SOURCES) $(HEADERS)
-	$(CC) $(CFLAGS) $(SOURCES) -o $(TARGET)
+$(TARGET): $(OBJECTS)
+	$(CC) $(CFLAGS) $(OBJECTS) -o $(TARGET) $(LDFLAGS)
+
+%.o: %.c $(HEADERS)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+debug: CFLAGS += -DDEBUG
+debug: clean all
 
 clean:
-	rm -f $(TARGET) *.o
+	rm -f $(TARGET) $(OBJECTS)
 
-.PHONY: all clean
-
+.PHONY: all clean debug
