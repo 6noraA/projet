@@ -8,7 +8,7 @@ function show_help() {
     echo "  fichier_dat          : Chemin vers le fichier .dat contenant les données."
     echo "  type_station         : Type de station (hvb, hva, lv)."
     echo "  type_consommateur    : Type de consommateur (comp, indiv, all)."
-    echo " type_central          : numero de la central (1,2,..,5) optionnel"
+    echo "  type_central         : Numéro de la centrale (1,2,..,5) (optionnel)."
     echo "  -h                   : Affiche cette aide."
     echo ""
     echo "Exemples d'utilisation:"
@@ -18,7 +18,7 @@ function show_help() {
     exit 1
 }
 
-# Fonction pour déplacer les anciens fichiers dans un dossier d'archives
+# Fonction pour archiver les anciens fichiers
 function archive_old_files() {
     local dir=$1
     local archive_dir="test"
@@ -32,14 +32,37 @@ function archive_old_files() {
     fi
 }
 
+# Répertoire contenant les fichiers C et le Makefile
+PROG_DIR="./progc"
+
+# Vérification du répertoire contenant le Makefile
+if [ ! -d "$PROG_DIR" ]; then
+    echo "Erreur : Le répertoire $PROG_DIR est introuvable."
+    exit 1
+fi
+
+# Compilation de c-wire si l'exécutable est introuvable ou obsolète
+if [ ! -x "$PROG_DIR/c-wire" ]; then
+    echo "L'exécutable c-wire est introuvable ou non exécutable. Tentative de compilation..."
+    cd "$PROG_DIR" || exit 1
+    make clean
+    make
+    if [ $? -ne 0 ]; then
+        echo "Erreur : Échec de la compilation avec Makefile."
+        exit 1
+    fi
+    cd - >/dev/null || exit 1
+    echo "Compilation réussie."
+else
+    echo "L'exécutable c-wire existe déjà."
+fi
+
 # Fonction pour exécuter c-wire avec animation
 function process_c_wire() {
     local input_file=$1
     local output_file=$2
 
     "$PROG_DIR/c-wire" "$input_file" >> "$output_file" 
-    echo "Traitement en cours..."
-    
     if [ $? -ne 0 ]; then
         echo "Erreur : Échec du traitement avec c-wire."
         exit 1
@@ -99,38 +122,14 @@ if [[ -n "$CENTRAL" ]]; then
     INPUT_FILE=fichier.csv
 fi
 
-
-
-                
-
-# Répertoire contenant les fichiers C et le Makefile
-PROG_DIR="./progc"
-
-# Vérification du répertoire contenant le Makefile
-if [ ! -d "$PROG_DIR" ]; then
-    echo "Erreur : Le répertoire $PROG_DIR est introuvable."
-    exit 1
-fi
-
-# Compilation via Makefile
-echo "Compilation de c-wire avec Makefile dans $PROG_DIR..."
-cd "$PROG_DIR" || exit 1
-make
-if [ $? -ne 0 ]; then
-    echo "Erreur : Échec de la compilation avec Makefile."
-    exit 1
-fi
-echo "Compilation réussie."
-cd - >/dev/null || exit 1
-
-# Création du dossier tmp et result, puis archivage des anciens fichiers
+# Création des dossiers temporaires
 mkdir -p tmp result test
 archive_old_files "tmp"
 archive_old_files "result"
 
-# Enregistrement du début du traitement
+# Lancement du traitement basé sur les paramètres
+echo "Traitement en cours pour le consommateur '$CONSUMER_TYPE' et station '$STATION_TYPE'..."
 start_time=$(date +%s)
-
 # Phase de prétraitement (avant l'appel de c-wire)
 echo "Fichier est en train d'être pré-traité pour le consommateur '$CONSUMER_TYPE' et station '$STATION_TYPE' ..."
 
@@ -200,13 +199,17 @@ case $STATION_TYPE in
                 echo "Station $STATION_TYPE : Capacité $CONSUMER_TYPE : Load" > "result/lv_all_resultat.csv"
                 process_c_wire tmp/lv_all.dat result/lv_all_resultat.csv
                 echo "Résultat final : result/lv_all_resultat.csv"
-                tail -n +2 "result/lv_all_resultat.csv" | sort -t':' -k3,3nr | head -n 10 > "tmp/lv_all_minmax.csv"
-	        tail -n +2 "result/lv_all_resultat.csv" | sort -t':' -k3,3nr | tail -n 10 >> "tmp/lv_all_minmax.csv"
-	        echo "Station $STATION_TYPE : Capacité $CONSUMER_TYPE : Load" > "result/lv_all_minmax.csv"
-		awk -F: '{diff = $2 - $3; print $0 ":" diff}' "tmp/lv_all_minmax.csv" | sort -t: -k4,4nr | uniq > "result/lv_all_minmax.csv"
-		
+                # Étape 1 : Extraire les 5 premières et 5 dernières lignes triées par la 3ᵉ colonne (en ordre décroissant)
+		tail -n +2 "result/lv_all_resultat.csv" | sort -t':' -k3,3nr | head -n 10 > "tmp/lv_all_minmax.csv"
+		tail -n +2 "result/lv_all_resultat.csv" | sort -t':' -k3,3nr | tail -n 10 >> "tmp/lv_all_minmax.csv"
 
+		# Étape 1 : Ajouter l'en-tête au fichier de sortie
+		echo "Station $STATION_TYPE : Capacité $CONSUMER_TYPE : Load" > "result/lv_all_minmax.csv"
 
+		# Étape 2 : Calculer la différence entre les colonnes 2 et 3, trier par cette différence, et supprimer la 4ᵉ colonne
+		awk -F: '{diff = $2 - $3; print $0 ":" diff}' "tmp/lv_all_minmax.csv" | sort -t: -k4,4n | uniq | cut -d: -f1-3 >> "result/lv_all_minmax.csv"
+
+		mv "graphe"/* "test/"
 		gnuplot graphe.gnu
 
 
@@ -223,11 +226,12 @@ case $STATION_TYPE in
 esac
 
 echo "Traitement terminé."
-# Enregistrement de la fin du traitement
 end_time=$(date +%s)
 execution_time=$((end_time - start_time))
-rm fichier.csv
+
+# Nettoyage temporaire
+rm -f fichier.csv
 
 # Affichage de la durée
-echo "Durée du traitement : ${execution_time} secondes."
+echo "Traitement terminé. Durée : ${execution_time} secondes."
 exit 0
