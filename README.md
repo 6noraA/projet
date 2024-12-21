@@ -92,5 +92,5 @@ Si vous avez besoin d’aide, un message d’assistance est disponible. Pour l�
 
 ---
 
-Ce fichier README fournit une documentation claire et concise pour le projet **C-WIRE**. Bonne utilisation ! 😊
+Ce fichier README fournit une documentation claire et concise pour le projet **C-WIRE**. Bonne utilisation ! 
 
